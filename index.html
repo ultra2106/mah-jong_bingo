@@ -60,7 +60,8 @@
     text-align:center; color:var(--cream);
     letter-spacing:1px;
   }
-  .sub{ font-size:13px; color:var(--gold); margin-bottom:18px; font-weight:700; }
+  .sub{ font-size:13px; color:var(--gold); margin-bottom:6px; font-weight:700; }
+  .hint{ font-size:11px; color:rgba(253,246,230,0.65); margin-bottom:16px; }
 
   .card{
     background:var(--cream);
@@ -91,6 +92,9 @@
     border:2px solid var(--line);
     box-shadow: inset 0 -4px 0 rgba(0,0,0,0.06);
     transition:transform .12s, background .15s, box-shadow .15s;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+    touch-action: manipulation;
   }
   .cell:active{ transform:scale(0.94); }
   .cell.checked{
@@ -170,6 +174,27 @@
   }
   .modal .yes{ background:var(--red); color:#fff; }
   .modal .no{ background:#e6e0d0; color:var(--navy); }
+
+  /* 役説明ポップアップ用 */
+  .explainModal{
+    background:var(--cream); border-radius:16px; padding:22px;
+    max-width:320px; width:100%; text-align:left;
+    border:3px solid var(--navy);
+  }
+  .explainModal h3{
+    font-family:'Shippori Mincho B1', serif;
+    font-size:18px; font-weight:800; margin:0 0 10px; color:var(--red);
+    text-align:center;
+  }
+  .explainModal p{
+    font-size:14px; line-height:1.7; margin:0 0 18px; font-weight:500;
+    text-align:left;
+  }
+  .explainModal button{
+    width:100%; padding:10px 0; border-radius:20px; border:none;
+    background:var(--navy); color:var(--gold); font-weight:900; font-size:14px;
+    cursor:pointer; font-family:'Zen Maru Gothic', sans-serif;
+  }
 </style>
 </head>
 <body>
@@ -179,6 +204,7 @@
 <div class="content">
   <h1>麻雀ビンゴ 〜わいわい卓〜</h1>
   <div class="sub" id="subtitle">あなた専用のビンゴカード</div>
+  <div class="hint">マスを長押しすると役の説明が見られます</div>
 
   <div class="card">
     <div class="grid" id="grid"></div>
@@ -197,6 +223,14 @@
       <button class="yes" onclick="confirmReshuffle()">はい、引き直す</button>
       <button class="no" onclick="closeModal()">やめる</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="explainOverlay">
+  <div class="explainModal">
+    <h3 id="explainTitle"></h3>
+    <p id="explainBody"></p>
+    <button onclick="closeExplain()">わかった！</button>
   </div>
 </div>
 
@@ -223,7 +257,7 @@ tileList.forEach(ch => {
   bgTiles.appendChild(t);
 });
 
-// 判定・データ用の元テキスト（変更なし）
+// 判定・データ用の元テキスト
 const ITEM_TEXT = {
   A:"東役", B:"南役", C:"西役", D:"北役",
   E:"満貫以上", F:"赤ドラ含む手牌", G:"一発", H:"流局",
@@ -231,7 +265,7 @@ const ITEM_TEXT = {
   L:"一盃口", M:"対々和", N:"ロン"
 };
 
-// 表示専用（改行位置を指定したいものだけ <br> を追加）
+// 表示専用（改行位置を指定）
 const ITEM_DISPLAY = {
   A:"東役", B:"南役", C:"西役", D:"北役",
   E:"満貫以上", F:"赤ドラ含む手牌", G:"一発", H:"流局",
@@ -239,6 +273,24 @@ const ITEM_DISPLAY = {
   J:"混全帯么九<br>（チャンタ）",
   K:"混一色<br>（清一色）",
   L:"一盃口", M:"対々和", N:"ロン"
+};
+
+// 初心者向けの役説明（長押しで表示）
+const ITEM_EXPLAIN = {
+  A:"自分が東家（親）の場合に、東（とん）の牌を対子や刻子として使ってあがると付く役です。",
+  B:"自分の風（自風）が南のときに、南の牌を使ってあがると付く役です。東・南・西・北のうち自分の風に合うものだけが対象です。",
+  C:"自分の風が西のときに、西の牌を使ってあがると付く役です。",
+  D:"自分の風が北のときに、北の牌を使ってあがると付く役です。",
+  E:"あがったときの点数が満貫（8000点前後）以上になる、大きい手のことです。役の種類は問いません。",
+  F:"手牌の中に「赤ドラ」（赤色の5の牌）が1枚でも含まれた状態であがることです。赤ドラ自体は役ではなく点数を上げるおまけの牌です。",
+  G:"リーチをかけてから、自分の次の1巡以内（他家が牌を捨てる前）にあがると付く役です。スピード重視のボーナスのようなものです。",
+  H:"誰もあがらないまま、山（残りの牌）がなくなって局が終わることです。あがりではありませんが、麻雀ではよくある結果の一つです。",
+  I:"同じ牌のペアを7組そろえてあがる特殊な形の役です。通常の4面子1雀頭とは違う、ちょっと変わったあがり方です。",
+  J:"すべての面子と雀頭に、1・9の牌か字牌（東南西北白發中）のどれかが必ず入っている形であがる役です。初心者にはやや難しい役です。",
+  K:"手牌が1種類の数牌（萬子・筒子・索子のどれか一つ）と字牌だけでそろっている役です。字牌を使わず1種類の数牌だけなら、さらに上位の「清一色」になります。",
+  L:"同じ並びの順子（例：2・3・4）が2組そろっている役です。細かい条件があるので、慣れてきたら狙ってみてください。",
+  M:"4つの面子がすべて刻子（同じ牌3枚）または槓子でできている役です。ポンやカンを多用する手でよく出ます。",
+  N:"他家が捨てた牌であがることです。自分でツモった牌ではなく、人が捨てた牌をもらってあがる形を指します。"
 };
 
 const POOL = Object.keys(ITEM_TEXT); // 14項目（ロン込み）
@@ -274,6 +326,8 @@ function saveChecked(){
   localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
 }
 
+const LONG_PRESS_MS = 500;
+
 function renderGrid(){
   gridEl.innerHTML = "";
   const gridOrder = [layout[0],layout[1],layout[2],layout[3],"FREE",layout[4],layout[5],layout[6],layout[7]];
@@ -281,19 +335,51 @@ function renderGrid(){
     const cell = document.createElement("div");
     cell.className = "cell" + (code === "FREE" ? " free checked" : "") + (checked[i] && code !== "FREE" ? " checked" : "");
     cell.innerHTML = code === "FREE" ? "FREE" : ITEM_DISPLAY[code];
+
     if(code !== "FREE"){
-      cell.addEventListener("click", () => {
-        checked[i] = !checked[i];
-        cell.classList.toggle("checked", checked[i]);
-        saveChecked();
-        checkBingo();
-      });
+      let pressTimer = null;
+      let longPressed = false;
+
+      const startPress = () => {
+        longPressed = false;
+        pressTimer = setTimeout(() => {
+          longPressed = true;
+          openExplain(code);
+        }, LONG_PRESS_MS);
+      };
+      const cancelPress = () => {
+        clearTimeout(pressTimer);
+      };
+      const endPress = () => {
+        clearTimeout(pressTimer);
+        if(!longPressed){
+          checked[i] = !checked[i];
+          cell.classList.toggle("checked", checked[i]);
+          saveChecked();
+          checkBingo();
+        }
+      };
+
+      cell.addEventListener("pointerdown", startPress);
+      cell.addEventListener("pointerup", endPress);
+      cell.addEventListener("pointerleave", cancelPress);
+      cell.addEventListener("pointercancel", cancelPress);
+      cell.addEventListener("contextmenu", (e) => e.preventDefault());
     }
     gridEl.appendChild(cell);
   });
   checkBingo();
 }
 renderGrid();
+
+function openExplain(code){
+  document.getElementById("explainTitle").textContent = ITEM_TEXT[code];
+  document.getElementById("explainBody").textContent = ITEM_EXPLAIN[code];
+  document.getElementById("explainOverlay").classList.add("show");
+}
+function closeExplain(){
+  document.getElementById("explainOverlay").classList.remove("show");
+}
 
 function checkBingo(){
   const lines = [
