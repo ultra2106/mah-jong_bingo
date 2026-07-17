@@ -111,7 +111,21 @@
     50%{ box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 0 0 6px rgba(224,168,57,0); }
   }
   .cell.win{ outline:3px solid var(--gold); outline-offset:2px; }
+  .cell.reach{
+    animation: reachPulse 1s ease-in-out infinite;
+    border-color: var(--gold);
+  }
+  @keyframes reachPulse{
+    0%,100%{ box-shadow: inset 0 -4px 0 rgba(0,0,0,0.06), 0 0 0 0 rgba(224,168,57,0.7); }
+    50%{ box-shadow: inset 0 -4px 0 rgba(0,0,0,0.06), 0 0 0 8px rgba(224,168,57,0); }
+  }
 
+  #reachBanner{
+    margin-top:14px; font-family:'Shippori Mincho B1', serif;
+    font-size:20px; color:var(--red); font-weight:800;
+    text-align:center; display:none;
+    animation: pop .4s ease;
+  }
   #bingoBanner{
     margin-top:20px; font-family:'Shippori Mincho B1', serif;
     font-size:30px; color:var(--gold); font-weight:800;
@@ -171,6 +185,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
+  <div id="reachBanner">リーチ！</div>
   <div id="bingoBanner">🀄 ビンゴ！ 🀄</div>
   <button class="resetBtn" id="resetBtn" onclick="askReshuffle()">カードを引き直す</button>
   <div class="usedNote" id="usedNote" style="display:none;">引き直しは一度だけ使用済みです</div>
@@ -277,14 +292,29 @@ function checkBingo(){
   ];
   const cells = gridEl.children;
   let won = false;
-  for(const c of cells) c.classList.remove("win");
+  const reachIndices = new Set();
+
+  for(const c of cells){ c.classList.remove("win"); c.classList.remove("reach"); }
+
   for(const line of lines){
-    if(line.every(idx => checked[idx])){
+    const count = line.filter(idx => checked[idx]).length;
+    if(count === 3){
       won = true;
       line.forEach(idx => cells[idx].classList.add("win"));
+    } else if(count === 2){
+      const remain = line.find(idx => !checked[idx]);
+      reachIndices.add(remain);
     }
   }
+
+  reachIndices.forEach(idx => {
+    if(!cells[idx].classList.contains("win")){
+      cells[idx].classList.add("reach");
+    }
+  });
+
   document.getElementById("bingoBanner").style.display = won ? "block" : "none";
+  document.getElementById("reachBanner").style.display = (!won && reachIndices.size > 0) ? "block" : "none";
 }
 
 const resetBtn = document.getElementById("resetBtn");
@@ -310,6 +340,7 @@ function confirmReshuffle(){
   checked[4] = true;
   saveChecked();
   document.getElementById("bingoBanner").style.display = "none";
+  document.getElementById("reachBanner").style.display = "none";
   renderGrid();
   closeModal();
   localStorage.setItem(RESHUFFLE_KEY, "1");
