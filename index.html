@@ -168,9 +168,9 @@ const ITEM_TEXT = {
   A:"東役で上がる", B:"南役で上がる", C:"西役で上がる", D:"北役で上がる",
   E:"満貫以上で上がる", F:"赤ドラ含む手牌で上がる", G:"一発", H:"流局",
   I:"七対子", J:"混全帯么九（チャンタ）で上がる", K:"混一色（清一色）で上がる",
-  L:"一盃口で上がる", M:"対々和で上がる"
+  L:"一盃口で上がる", M:"対々和で上がる", N:"ロン"
 };
-const POOL = Object.keys(ITEM_TEXT);
+const POOL = Object.keys(ITEM_TEXT); // 14項目（ロン込み）
 
 function shuffle(arr){
   const a = [...arr];
@@ -186,7 +186,7 @@ const RESHUFFLE_KEY = "mahjongBingoReshuffled_v1";
 
 let layout = JSON.parse(localStorage.getItem(CARD_KEY) || "null");
 if(!layout){
-  layout = shuffle(POOL).slice(0,8);
+  layout = shuffle(POOL).slice(0,8); // 14項目から8個ランダム
   localStorage.setItem(CARD_KEY, JSON.stringify(layout));
 }
 
@@ -200,7 +200,7 @@ function renderGrid(){
   gridOrder.forEach((code, i) => {
     const cell = document.createElement("div");
     cell.className = "cell" + (code === "FREE" ? " free checked" : "") + (checked[i] && code !== "FREE" ? " checked" : "");
-    cell.textContent = code === "FREE" ? "ロン" : ITEM_TEXT[code];
+    cell.textContent = code === "FREE" ? "FREE" : ITEM_TEXT[code];
     if(code !== "FREE"){
       cell.addEventListener("click", () => {
         checked[i] = !checked[i];
@@ -231,7 +231,6 @@ function checkBingo(){
   document.getElementById("bingoBanner").style.display = won ? "block" : "none";
 }
 
-// --- 引き直し（1回だけ） ---
 const resetBtn = document.getElementById("resetBtn");
 const usedNote = document.getElementById("usedNote");
 const overlay = document.getElementById("overlay");
