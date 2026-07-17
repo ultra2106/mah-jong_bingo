@@ -18,16 +18,34 @@
   body{
     margin:0; padding:28px 16px 60px;
     background:
-      repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 18px),
       radial-gradient(circle at 50% 0%, var(--felt) 0%, var(--felt-dark) 100%);
     color:var(--navy);
     font-family:'Zen Maru Gothic', sans-serif;
     display:flex; flex-direction:column; align-items:center;
     min-height:100%;
+    position:relative;
+    overflow-x:hidden;
   }
-  .badge{
-    display:flex; gap:10px; align-items:center; margin-bottom:6px;
+
+  /* 背景に散らす牌 */
+  .bgTiles{
+    position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none;
   }
+  .bgTile{
+    position:absolute;
+    width:52px; height:70px;
+    background:rgba(255,253,247,0.08);
+    border:2px solid rgba(255,253,247,0.14);
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Shippori Mincho B1', serif;
+    font-size:26px; font-weight:800;
+    color:rgba(255,253,247,0.16);
+  }
+
+  .content{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; width:100%; }
+
+  .badge{ display:flex; gap:10px; align-items:center; margin-bottom:6px; }
   .badge span{
     font-family:'Shippori Mincho B1', serif;
     font-size:22px; color:var(--gold);
@@ -141,17 +159,20 @@
 </head>
 <body>
 
-<div class="badge"><span>發</span></div>
-<h1>麻雀ビンゴ 〜初心者卓〜</h1>
-<div class="sub" id="subtitle">あなた専用のビンゴカード</div>
+<div class="bgTiles" id="bgTiles"></div>
 
-<div class="card">
-  <div class="grid" id="grid"></div>
+<div class="content">
+  <h1>麻雀ビンゴ 〜わいわい卓〜</h1>
+  <div class="sub" id="subtitle">あなた専用のビンゴカード</div>
+
+  <div class="card">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div id="bingoBanner">🀄 ビンゴ！ 🀄</div>
+  <button class="resetBtn" id="resetBtn" onclick="askReshuffle()">カードを引き直す</button>
+  <div class="usedNote" id="usedNote" style="display:none;">引き直しは一度だけ使用済みです</div>
 </div>
-
-<div id="bingoBanner">🀄 ビンゴ！ 🀄</div>
-<button class="resetBtn" id="resetBtn" onclick="askReshuffle()">カードを引き直す</button>
-<div class="usedNote" id="usedNote" style="display:none;">引き直しは一度だけ使用済みです</div>
 
 <div class="overlay" id="overlay">
   <div class="modal">
@@ -164,6 +185,20 @@
 </div>
 
 <script>
+// --- 背景に牌をランダム散らす ---
+const TILE_CHARS = ["東","南","西","北","中","發","白"];
+const bgTiles = document.getElementById("bgTiles");
+const TILE_COUNT = 18;
+for(let i=0;i<TILE_COUNT;i++){
+  const t = document.createElement("div");
+  t.className = "bgTile";
+  t.textContent = TILE_CHARS[Math.floor(Math.random()*TILE_CHARS.length)];
+  t.style.left = Math.random()*90 + "vw";
+  t.style.top = Math.random()*400 + "vh"; // 縦に長いページでも散るように広め
+  t.style.transform = "rotate(" + (Math.random()*60 - 30) + "deg)";
+  bgTiles.appendChild(t);
+}
+
 const ITEM_TEXT = {
   A:"東役で上がる", B:"南役で上がる", C:"西役で上がる", D:"北役で上がる",
   E:"満貫以上で上がる", F:"赤ドラ含む手牌で上がる", G:"一発", H:"流局",
@@ -182,17 +217,27 @@ function shuffle(arr){
 }
 
 const CARD_KEY = "mahjongBingoCard_v1";
+const CHECKED_KEY = "mahjongBingoChecked_v1";
 const RESHUFFLE_KEY = "mahjongBingoReshuffled_v1";
 
 let layout = JSON.parse(localStorage.getItem(CARD_KEY) || "null");
 if(!layout){
-  layout = shuffle(POOL).slice(0,8); // 14項目から8個ランダム
+  layout = shuffle(POOL).slice(0,8);
   localStorage.setItem(CARD_KEY, JSON.stringify(layout));
 }
 
 const gridEl = document.getElementById("grid");
-const checked = new Array(9).fill(false);
-checked[4] = true;
+
+// チェック状態を保存から復元（なければ中央だけON）
+let checked = JSON.parse(localStorage.getItem(CHECKED_KEY) || "null");
+if(!checked || checked.length !== 9){
+  checked = new Array(9).fill(false);
+  checked[4] = true;
+}
+
+function saveChecked(){
+  localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
+}
 
 function renderGrid(){
   gridEl.innerHTML = "";
@@ -205,11 +250,13 @@ function renderGrid(){
       cell.addEventListener("click", () => {
         checked[i] = !checked[i];
         cell.classList.toggle("checked", checked[i]);
+        saveChecked();
         checkBingo();
       });
     }
     gridEl.appendChild(cell);
   });
+  checkBingo();
 }
 renderGrid();
 
@@ -250,12 +297,13 @@ function closeModal(){
 function confirmReshuffle(){
   layout = shuffle(POOL).slice(0,8);
   localStorage.setItem(CARD_KEY, JSON.stringify(layout));
-  localStorage.setItem(RESHUFFLE_KEY, "1");
-  checked.fill(false);
+  checked = new Array(9).fill(false);
   checked[4] = true;
+  saveChecked();
   document.getElementById("bingoBanner").style.display = "none";
   renderGrid();
   closeModal();
+  localStorage.setItem(RESHUFFLE_KEY, "1");
   resetBtn.disabled = true;
   resetBtn.style.display = "none";
   usedNote.style.display = "block";
