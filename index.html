@@ -44,30 +44,6 @@
     font-size:26px; font-weight:800;
     color:rgba(255,253,247,0.15);
   }
-  /* 筒子（ドット柄）風 */
-  .bgTile.dots{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    grid-template-rows:repeat(3,1fr);
-    gap:4px;
-    padding:8px;
-  }
-  .bgTile.dots span{
-    border-radius:50%;
-    background:rgba(255,253,247,0.16);
-    width:100%; height:100%;
-  }
-  /* 索子（バー柄）風 */
-  .bgTile.bars{
-    display:flex;
-    gap:5px;
-    padding:8px 10px;
-  }
-  .bgTile.bars span{
-    width:6px; height:100%;
-    border-radius:3px;
-    background:rgba(255,253,247,0.16);
-  }
 
   .content{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; width:100%; }
 
@@ -211,44 +187,27 @@
 </div>
 
 <script>
-// --- 背景に牌をランダム散らす（漢字牌・筒子・索子ミックス） ---
-const KANJI_CHARS = ["東","南","西","北","中","發","白","一","九"];
+// --- 背景に牌をランダム散らす（東南西北中發白のみ、各4個・計28個） ---
+const KANJI_CHARS = ["東","南","西","北","中","發","白"];
+const TILE_PER_CHAR = 4; // ← ここが「1文字あたり何個」かの数字です
 const bgTiles = document.getElementById("bgTiles");
-const TILE_COUNT = 32;
 
-for(let i=0;i<TILE_COUNT;i++){
+let tileList = [];
+KANJI_CHARS.forEach(ch => {
+  for(let i=0;i<TILE_PER_CHAR;i++) tileList.push(ch);
+});
+tileList = tileList.sort(() => Math.random() - 0.5);
+
+tileList.forEach(ch => {
   const t = document.createElement("div");
-  const kind = Math.random();
-  const scale = 0.7 + Math.random()*0.7; // 0.7〜1.4倍でサイズにばらつき
-
-  if(kind < 0.5){
-    // 漢字牌
-    t.className = "bgTile kanji";
-    t.textContent = KANJI_CHARS[Math.floor(Math.random()*KANJI_CHARS.length)];
-  } else if(kind < 0.75){
-    // 筒子風（ドット、2〜6個ランダム）
-    t.className = "bgTile dots";
-    const dotCount = 2 + Math.floor(Math.random()*5);
-    for(let d=0; d<6; d++){
-      const dot = document.createElement("span");
-      dot.style.visibility = d < dotCount ? "visible" : "hidden";
-      t.appendChild(dot);
-    }
-  } else {
-    // 索子風（バー、2〜4本ランダム）
-    t.className = "bgTile bars";
-    const barCount = 2 + Math.floor(Math.random()*3);
-    for(let b=0; b<barCount; b++){
-      const bar = document.createElement("span");
-      t.appendChild(bar);
-    }
-  }
-
+  t.className = "bgTile kanji";
+  t.textContent = ch;
+  const scale = 0.7 + Math.random()*0.7;
   t.style.left = Math.random()*92 + "vw";
   t.style.top = Math.random()*450 + "vh";
   t.style.transform = "rotate(" + (Math.random()*60 - 30) + "deg) scale(" + scale.toFixed(2) + ")";
   bgTiles.appendChild(t);
-}
+});
 
 const ITEM_TEXT = {
   A:"東役で上がる", B:"南役で上がる", C:"西役で上がる", D:"北役で上がる",
