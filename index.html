@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麻雀ビンゴ 〜初心者卓〜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt:#0e5c43; --felt-dark:#0a4633;
+    --cream:#fdf6e6; --tile:#fffdf7;
+    --red:#c8372a; --gold:#e0a839; --navy:#1f2a3d;
+    --line:#e3d7bd;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; padding:28px 16px 60px;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 18px),
+      radial-gradient(circle at 50% 0%, var(--felt) 0%, var(--felt-dark) 100%);
+    color:var(--navy);
+    font-family:'Zen Maru Gothic', sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100%;
+  }
+  .badge{
+    display:flex; gap:10px; align-items:center; margin-bottom:6px;
+  }
+  .badge span{
+    font-family:'Shippori Mincho B1', serif;
+    font-size:22px; color:var(--gold);
+    background:var(--navy); width:36px; height:36px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25);
+  }
+  h1{
+    font-family:'Shippori Mincho B1', serif;
+    font-size:26px; font-weight:800; margin:0 0 2px;
+    text-align:center; color:var(--cream);
+    letter-spacing:1px;
+  }
+  .sub{ font-size:13px; color:var(--gold); margin-bottom:18px; font-weight:700; }
+
+  .card{
+    background:var(--cream);
+    border-radius:20px; padding:18px;
+    box-shadow: 0 10px 0 rgba(0,0,0,0.18), 0 14px 24px rgba(0,0,0,0.25);
+    max-width:420px; width:100%;
+    border:3px solid var(--red);
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:6px;
+    border:1.5px dashed var(--gold);
+    border-radius:14px;
+    pointer-events:none;
+  }
+
+  .grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+    position:relative; z-index:1;
+  }
+  .cell{
+    aspect-ratio:1; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:8px; font-size:13px; line-height:1.3;
+    font-weight:700;
+    cursor:pointer; background:var(--tile); color:var(--navy);
+    border:2px solid var(--line);
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.06);
+    transition:transform .12s, background .15s, box-shadow .15s;
+  }
+  .cell:active{ transform:scale(0.94); }
+  .cell.checked{
+    background:var(--red); color:#fff;
+    border-color:var(--red);
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25);
+  }
+  .cell.free{
+    background:var(--navy); color:var(--gold);
+    font-family:'Shippori Mincho B1', serif;
+    font-size:22px; font-weight:800; cursor:default;
+    border-color:var(--navy);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 0 0 0 rgba(224,168,57,0.5); }
+    50%{ box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 0 0 6px rgba(224,168,57,0); }
+  }
+  .cell.win{ outline:3px solid var(--gold); outline-offset:2px; }
+
+  #bingoBanner{
+    margin-top:20px; font-family:'Shippori Mincho B1', serif;
+    font-size:30px; color:var(--gold); font-weight:800;
+    text-align:center; display:none;
+    text-shadow: 0 3px 0 rgba(0,0,0,0.3);
+    animation: pop .5s ease;
+  }
+  @keyframes pop{
+    0%{ transform:scale(0.5); opacity:0; }
+    60%{ transform:scale(1.15); opacity:1; }
+    100%{ transform:scale(1); }
+  }
+
+  .resetBtn{
+    margin-top:18px; padding:10px 24px; border-radius:24px;
+    border:none; background:var(--gold); color:var(--navy); font-size:14px;
+    font-weight:900; cursor:pointer; font-family:'Zen Maru Gothic', sans-serif;
+    box-shadow: 0 4px 0 #a97e1f;
+  }
+  .resetBtn:active{ transform:translateY(3px); box-shadow:none; }
+  .resetBtn:disabled{
+    background:#8a8a80; color:#e5e5e0; box-shadow:none; cursor:default;
+  }
+  .usedNote{ color:var(--gold); font-size:12px; margin-top:10px; text-align:center; }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    display:none; align-items:center; justify-content:center; z-index:10;
+    padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--cream); border-radius:16px; padding:24px;
+    max-width:320px; width:100%; text-align:center;
+    border:3px solid var(--red);
+  }
+  .modal p{ font-weight:700; font-size:15px; margin:0 0 18px; }
+  .modal .row{ display:flex; gap:10px; justify-content:center; }
+  .modal button{
+    flex:1; padding:10px 0; border-radius:20px; border:none;
+    font-weight:900; font-size:14px; cursor:pointer;
+    font-family:'Zen Maru Gothic', sans-serif;
+  }
+  .modal .yes{ background:var(--red); color:#fff; }
+  .modal .no{ background:#e6e0d0; color:var(--navy); }
+</style>
+</head>
+<body>
+
+<div class="badge"><span>發</span></div>
+<h1>麻雀ビンゴ 〜初心者卓〜</h1>
+<div class="sub" id="subtitle">あなた専用のビンゴカード</div>
+
+<div class="card">
+  <div class="grid" id="grid"></div>
+</div>
+
+<div id="bingoBanner">🀄 ビンゴ！ 🀄</div>
+<button class="resetBtn" id="resetBtn" onclick="askReshuffle()">カードを引き直す</button>
+<div class="usedNote" id="usedNote" style="display:none;">引き直しは一度だけ使用済みです</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <p>本当に引き直しますか？<br>この操作は一度しかできません。</p>
+    <div class="row">
+      <button class="yes" onclick="confirmReshuffle()">はい、引き直す</button>
+      <button class="no" onclick="closeModal()">やめる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ITEM_TEXT = {
+  A:"東役で上がる", B:"南役で上がる", C:"西役で上がる", D:"北役で上がる",
+  E:"満貫以上で上がる", F:"赤ドラ含む手牌で上がる", G:"一発", H:"流局",
+  I:"七対子", J:"混全帯么九（チャンタ）で上がる", K:"混一色（清一色）で上がる",
+  L:"一盃口で上がる", M:"対々和で上がる"
+};
+const POOL = Object.keys(ITEM_TEXT);
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+const CARD_KEY = "mahjongBingoCard_v1";
+const RESHUFFLE_KEY = "mahjongBingoReshuffled_v1";
+
+let layout = JSON.parse(localStorage.getItem(CARD_KEY) || "null");
+if(!layout){
+  layout = shuffle(POOL).slice(0,8);
+  localStorage.setItem(CARD_KEY, JSON.stringify(layout));
+}
+
+const gridEl = document.getElementById("grid");
+const checked = new Array(9).fill(false);
+checked[4] = true;
+
+function renderGrid(){
+  gridEl.innerHTML = "";
+  const gridOrder = [layout[0],layout[1],layout[2],layout[3],"FREE",layout[4],layout[5],layout[6],layout[7]];
+  gridOrder.forEach((code, i) => {
+    const cell = document.createElement("div");
+    cell.className = "cell" + (code === "FREE" ? " free checked" : "") + (checked[i] && code !== "FREE" ? " checked" : "");
+    cell.textContent = code === "FREE" ? "ロン" : ITEM_TEXT[code];
+    if(code !== "FREE"){
+      cell.addEventListener("click", () => {
+        checked[i] = !checked[i];
+        cell.classList.toggle("checked", checked[i]);
+        checkBingo();
+      });
+    }
+    gridEl.appendChild(cell);
+  });
+}
+renderGrid();
+
+function checkBingo(){
+  const lines = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  const cells = gridEl.children;
+  let won = false;
+  for(const c of cells) c.classList.remove("win");
+  for(const line of lines){
+    if(line.every(idx => checked[idx])){
+      won = true;
+      line.forEach(idx => cells[idx].classList.add("win"));
+    }
+  }
+  document.getElementById("bingoBanner").style.display = won ? "block" : "none";
+}
+
+// --- 引き直し（1回だけ） ---
+const resetBtn = document.getElementById("resetBtn");
+const usedNote = document.getElementById("usedNote");
+const overlay = document.getElementById("overlay");
+
+if(localStorage.getItem(RESHUFFLE_KEY) === "1"){
+  resetBtn.disabled = true;
+  resetBtn.style.display = "none";
+  usedNote.style.display = "block";
+}
+
+function askReshuffle(){
+  overlay.classList.add("show");
+}
+function closeModal(){
+  overlay.classList.remove("show");
+}
+function confirmReshuffle(){
+  layout = shuffle(POOL).slice(0,8);
+  localStorage.setItem(CARD_KEY, JSON.stringify(layout));
+  localStorage.setItem(RESHUFFLE_KEY, "1");
+  checked.fill(false);
+  checked[4] = true;
+  document.getElementById("bingoBanner").style.display = "none";
+  renderGrid();
+  closeModal();
+  resetBtn.disabled = true;
+  resetBtn.style.display = "none";
+  usedNote.style.display = "block";
+}
+</script>
+</body>
+</html>
