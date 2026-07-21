@@ -238,6 +238,21 @@
     80%{ opacity:1; }
     100%{ opacity:0; }
   }
+
+  #fallingTiles{
+    position:fixed; inset:0; z-index:15; pointer-events:none; overflow:hidden;
+  }
+  .fallTile{
+    position:absolute; top:-40px;
+    font-family:'Shippori Mincho B1', serif;
+    font-weight:800; color:var(--cream);
+    text-shadow:0 2px 0 rgba(0,0,0,0.25);
+    animation: fallDown linear forwards;
+  }
+  @keyframes fallDown{
+    0%{ transform:translateY(0) rotate(0deg); opacity:0.95; }
+    100%{ transform:translateY(115vh) rotate(360deg); opacity:0.15; }
+  }
 </style>
 </head>
 <body>
@@ -245,6 +260,7 @@
 <div class="bgTiles" id="bgTiles"></div>
 <div id="tenhouFlash"></div>
 <div id="tenhouBanner">🌟 天和 🌟<span>奇跡の配牌です！</span></div>
+<div id="fallingTiles"></div>
 
 <div class="content">
   <h1>麻雀ビンゴ 〜わいわい卓〜</h1>
@@ -547,6 +563,27 @@ function triggerTenhouEffect(){
   checkBingo();
 }
 
+// --- ビンゴ達成時に牌が舞い落ちる演出 ---
+const fallingTilesEl = document.getElementById("fallingTiles");
+let bingoCelebrated = false;
+
+function triggerFallingTiles(){
+  const count = 26;
+  for(let i=0;i<count;i++){
+    const t = document.createElement("div");
+    t.className = "fallTile";
+    t.textContent = KANJI_CHARS[Math.floor(Math.random()*KANJI_CHARS.length)];
+    t.style.left = Math.random()*96 + "vw";
+    t.style.fontSize = (18 + Math.random()*14) + "px";
+    const duration = 1.8 + Math.random()*1.4;
+    const delay = Math.random()*0.6;
+    t.style.animationDuration = duration + "s";
+    t.style.animationDelay = delay + "s";
+    fallingTilesEl.appendChild(t);
+    setTimeout(() => t.remove(), (duration + delay) * 1000 + 200);
+  }
+}
+
 renderGrid(isFreshLayout);
 
 function openExplain(code){
@@ -589,6 +626,13 @@ function checkBingo(){
 
   document.getElementById("bingoBanner").style.display = won ? "block" : "none";
   document.getElementById("reachBanner").style.display = (!won && reachIndices.size > 0) ? "block" : "none";
+
+  if(won && !bingoCelebrated){
+    bingoCelebrated = true;
+    triggerFallingTiles();
+  } else if(!won){
+    bingoCelebrated = false;
+  }
 }
 
 const resetBtn = document.getElementById("resetBtn");
@@ -644,6 +688,7 @@ function confirmReshuffle(){
 
   document.getElementById("bingoBanner").style.display = "none";
   document.getElementById("reachBanner").style.display = "none";
+  bingoCelebrated = false;
 
   const used = getReshuffleCount() + 1;
   localStorage.setItem(RESHUFFLE_COUNT_KEY, String(used));
