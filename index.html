@@ -153,6 +153,17 @@
   }
   .usedNote{ color:var(--gold); font-size:12px; margin-top:10px; text-align:center; }
 
+  .scoreLink{
+    margin-top:22px; display:inline-flex; align-items:center; gap:6px;
+    padding:9px 20px; border-radius:22px;
+    background:rgba(253,246,230,0.1); border:1.5px solid var(--gold);
+    color:var(--cream); font-size:13px; font-weight:700;
+    text-decoration:none; font-family:'Zen Maru Gothic', sans-serif;
+    transition:background .15s;
+  }
+  .scoreLink:hover{ background:rgba(253,246,230,0.18); }
+  .scoreLink span{ color:var(--gold); font-size:15px; }
+
   .overlay{
     position:fixed; inset:0; background:rgba(0,0,0,0.55);
     display:none; align-items:center; justify-content:center; z-index:10;
@@ -250,6 +261,10 @@
   <div id="bingoBanner">🀄 ビンゴ！ 🀄</div>
   <button class="resetBtn" id="resetBtn" onclick="askReshuffle()">カードを引き直す</button>
   <div class="usedNote" id="usedNote" style="display:none;">引き直しは一度だけ使用済みです</div>
+
+  <a class="scoreLink" href="https://ultra2106.github.io/mahjong/" target="_blank" rel="noopener">
+    <span>🧮</span>点数計算はこちら
+  </a>
 </div>
 
 <div class="overlay" id="overlay">
@@ -345,12 +360,12 @@ const ITEM_EXPLAIN = {
 
 // ★出現率（重み）：外側8マスの抽選対象（Rは中央固定なのでここには含めません）
 const WEIGHTS = {
-  A:10, B:10, C:10, D:10,
-  E:8, F:9, G:6, H:8,
-  I:9, J:9, K:6,
-  L:10, M:6, N:5,
-  O:6, P:4,
-  Q:7, R2:5, S:6, T:5, U:2
+  A:20, B:20, C:20, D:20,
+  E:20, F:20, G:20, H:20,
+  I:20, J:20, K:20,
+  L:20, M:20, N:20,
+  O:20, P:20,
+  Q:20, R2:20, S:20, T:1, U:1
 };
 
 const POOL = Object.keys(WEIGHTS); // 外側8マス用の21項目（Rは含まない）
