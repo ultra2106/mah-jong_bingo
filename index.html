@@ -100,17 +100,6 @@
     border-color:var(--red);
     box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25);
   }
-  .cell.free{
-    background:var(--navy); color:var(--gold);
-    font-family:'Shippori Mincho B1', serif;
-    font-size:22px; font-weight:800; cursor:default;
-    border-color:var(--navy);
-    animation: pulse 2.2s ease-in-out infinite;
-  }
-  @keyframes pulse{
-    0%,100%{ box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 0 0 0 rgba(224,168,57,0.5); }
-    50%{ box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 0 0 6px rgba(224,168,57,0); }
-  }
   .cell.win{ outline:3px solid var(--gold); outline-offset:2px; }
   .cell.reach{
     animation: reachPulse 1s ease-in-out infinite;
@@ -304,7 +293,7 @@ tileList.forEach(ch => {
   bgTiles.appendChild(t);
 });
 
-// 判定・データ用の元テキスト（新しい21項目）
+// 判定・データ用の元テキスト（中央固定のリーチは "R" として通常マス扱い）
 const ITEM_TEXT = {
   A:"東", B:"南", C:"西", D:"北",
   E:"白・發・中",
@@ -312,7 +301,8 @@ const ITEM_TEXT = {
   I:"断么九（タンヤオ）", J:"平和（ピンフ）", K:"一盃口（イーペーコー）",
   L:"ロン", M:"対々和（トイトイ）", N:"一気通貫（イッツー）",
   O:"七対子（チートイツ）", P:"混一色・清一色（ホンイツ・チンイツ）",
-  Q:"満貫以上", R:"カン", S:"副露2回以上", T:"麻雀ギャグ", U:"役満"
+  Q:"満貫以上", R2:"カン", S:"副露2回以上", T:"麻雀ギャグ", U:"役満",
+  R:"リーチ"
 };
 
 // 表示専用（改行位置を指定）
@@ -323,7 +313,8 @@ const ITEM_DISPLAY = {
   I:"断么九<br>（タンヤオ）", J:"平和<br>（ピンフ）", K:"一盃口<br>（イーペーコー）",
   L:"ロン", M:"対々和<br>（トイトイ）", N:"一気通貫<br>（イッツー）",
   O:"七対子<br>（チートイツ）", P:"混一色<br>清一色",
-  Q:"満貫以上<br>（4翻以上）", R:"カン", S:"副露2回<br>以上", T:"麻雀ギャグ", U:"役満"
+  Q:"満貫以上<br>（4翻以上）", R2:"カン", S:"副露2回<br>以上", T:"麻雀ギャグ", U:"役満",
+  R:"リーチ"
 };
 
 // 初心者向けの役説明（長押しで表示）
@@ -345,23 +336,24 @@ const ITEM_EXPLAIN = {
   O:"同じ牌のペアを7組そろえてあがる特殊な形の役です。通常の4面子1雀頭とは違う、ちょっと変わったあがり方です。",
   P:"手牌が1種類の数牌と字牌だけでそろっている（混一色）、または字牌を使わず1種類の数牌だけでそろっている（清一色）役です。",
   Q:"あがったときの点数が満貫（8000点前後）以上、翻数でいうと4翻以上になる大きい手のことです。",
-  R:"他家の捨て牌や自分の手牌を使って「カン」（同じ牌4枚を晒す、または追加する）をすることです。大明槓・暗槓のどちらでも対象です。",
+  R2:"他家の捨て牌や自分の手牌を使って「カン」（同じ牌4枚を晒す、または追加する）をすることです。大明槓・暗槓のどちらでも対象です。",
   S:"チーやポンなどの「副露」を、1局のうちに2回以上している状態であがることです。",
   T:"麻雀中に発した一言やボケで、卓を囲む2人以上を実際に笑わせることです。テーブルの空気を和ませるボーナス項目です。",
-  U:"役満（満貫よりもさらに大きい、麻雀で最高クラスの役）をあがることです。滅多に出ない特別な達成です。"
+  U:"役満（満貫よりもさらに大きい、麻雀で最高クラスの役）をあがることです。滅多に出ない特別な達成です。",
+  R:"テンパイ（あと1枚であがれる状態）のときに「リーチ」を宣言し、そのままあがることです。宣言後は手牌を替えられなくなりますが、一発や裏ドラなどのチャンスが生まれます。"
 };
 
-// ★ここで出現率（重み）を調整できます。数字が大きいほど出やすく、小さいほどレアになります。
+// ★出現率（重み）：外側8マスの抽選対象（Rは中央固定なのでここには含めません）
 const WEIGHTS = {
   A:10, B:10, C:10, D:10,
   E:8, F:9, G:6, H:8,
   I:9, J:9, K:6,
   L:10, M:6, N:5,
   O:6, P:4,
-  Q:7, R:5, S:6, T:5, U:2
+  Q:7, R2:5, S:6, T:5, U:2
 };
 
-const POOL = Object.keys(ITEM_TEXT); // 21項目
+const POOL = Object.keys(WEIGHTS); // 外側8マス用の21項目（Rは含まない）
 const SPIN_TEXTS = Object.values(ITEM_DISPLAY);
 
 // 重み付きで、重複なくk個選ぶ関数
@@ -407,15 +399,13 @@ if(!layout){
     checked = new Array(9).fill(true);
     localStorage.setItem(TENHOU_KEY, "1");
   } else {
-    checked = new Array(9).fill(false);
-    checked[4] = true;
+    checked = new Array(9).fill(false); // 中央のリーチも他と同じく最初は未チェック
   }
   localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
 } else {
   checked = JSON.parse(localStorage.getItem(CHECKED_KEY) || "null");
   if(!checked || checked.length !== 9){
     checked = new Array(9).fill(false);
-    checked[4] = true;
   }
 }
 
@@ -432,7 +422,6 @@ const gridEl = document.getElementById("grid");
 const LONG_PRESS_MS = 500;
 
 function attachCellEvents(cell, i, code){
-  if(code === "FREE") return;
   let pressTimer = null;
   let longPressed = false;
 
@@ -463,11 +452,12 @@ function attachCellEvents(cell, i, code){
 
 function renderGrid(animate){
   gridEl.innerHTML = "";
-  const gridOrder = [layout[0],layout[1],layout[2],layout[3],"FREE",layout[4],layout[5],layout[6],layout[7]];
+  // 中央固定は "R"（リーチ）。他の通常マスと同じ扱いです。
+  const gridOrder = [layout[0],layout[1],layout[2],layout[3],"R",layout[4],layout[5],layout[6],layout[7]];
   gridOrder.forEach((code, i) => {
     const cell = document.createElement("div");
-    cell.className = "cell" + (code === "FREE" ? " free checked" : "") + (checked[i] && code !== "FREE" ? " checked" : "");
-    cell.innerHTML = code === "FREE" ? "リーチ" : ITEM_DISPLAY[code];
+    cell.className = "cell" + (checked[i] ? " checked" : "");
+    cell.innerHTML = ITEM_DISPLAY[code];
     attachCellEvents(cell, i, code);
     gridEl.appendChild(cell);
   });
@@ -482,25 +472,24 @@ function runSlotReveal(gridOrder){
   const cells = gridEl.children;
   gridEl.classList.add("spinning");
 
-  const finalHTML = gridOrder.map(code => code === "FREE" ? "リーチ" : ITEM_DISPLAY[code]);
+  const finalHTML = gridOrder.map(code => ITEM_DISPLAY[code]);
   const columns = [
     { indices:[0,3,6], duration:800 },
     { indices:[1,4,7], duration:800 },
-    { indices:[2,5,8], duration:800 }
+    { indices:[2,5,8], duration:800 } // 中央(4)もここで一緒に回る
   ];
 
   let colStep = 0;
 
   function spinColumn(col){
     const timers = col.indices.map(idx => {
-      if(idx === 4) return null;
       return setInterval(() => {
         cells[idx].innerHTML = SPIN_TEXTS[Math.floor(Math.random()*SPIN_TEXTS.length)];
       }, 65);
     });
 
     setTimeout(() => {
-      timers.forEach(t => t && clearInterval(t));
+      timers.forEach(t => clearInterval(t));
       col.indices.forEach(idx => {
         cells[idx].innerHTML = finalHTML[idx];
         cells[idx].classList.add("locking");
@@ -612,7 +601,6 @@ function confirmReshuffle(){
     localStorage.setItem(TENHOU_KEY, "1");
   } else {
     checked = new Array(9).fill(false);
-    checked[4] = true;
   }
   saveChecked();
 
