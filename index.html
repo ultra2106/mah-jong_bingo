@@ -260,7 +260,7 @@
   <div id="reachBanner">リーチ！</div>
   <div id="bingoBanner">🀄 ビンゴ！ 🀄</div>
   <button class="resetBtn" id="resetBtn" onclick="askReshuffle()">カードを引き直す</button>
-  <div class="usedNote" id="usedNote" style="display:none;">引き直しは一度だけ使用済みです</div>
+  <div class="usedNote" id="usedNote" style="display:none;"></div>
 
   <a class="scoreLink" href="https://ultra2106.github.io/mahjong/" target="_blank" rel="noopener">
     <span>🧮</span>点数計算はこちら
@@ -269,7 +269,7 @@
 
 <div class="overlay" id="overlay">
   <div class="modal">
-    <p>本当に引き直しますか？<br>この操作は一度しかできません。</p>
+    <p>本当に引き直しますか？<br>この操作は残り回数を1回消費します。</p>
     <div class="row">
       <button class="yes" onclick="confirmReshuffle()">はい、引き直す</button>
       <button class="no" onclick="closeModal()">やめる</button>
@@ -398,8 +398,11 @@ function rollTenhou(){
 
 const CARD_KEY = "mahjongBingoCard_v1";
 const CHECKED_KEY = "mahjongBingoChecked_v1";
-const RESHUFFLE_KEY = "mahjongBingoReshuffled_v1";
+const RESHUFFLE_COUNT_KEY = "mahjongBingoReshuffleCount_v1"; // 使った引き直し回数
 const TENHOU_KEY = "mahjongBingoTenhou_v1";
+
+// ★引き直しできる最大回数。ここの数字を変えれば回数を調整できます。
+const MAX_RESHUFFLES = 2;
 
 let layout = JSON.parse(localStorage.getItem(CARD_KEY) || "null");
 let isFreshLayout = false;
@@ -592,11 +595,31 @@ const resetBtn = document.getElementById("resetBtn");
 const usedNote = document.getElementById("usedNote");
 const overlay = document.getElementById("overlay");
 
-if(localStorage.getItem(RESHUFFLE_KEY) === "1"){
-  resetBtn.disabled = true;
-  resetBtn.style.display = "none";
-  usedNote.style.display = "block";
+function getReshuffleCount(){
+  return parseInt(localStorage.getItem(RESHUFFLE_COUNT_KEY) || "0", 10);
 }
+
+function updateReshuffleUI(){
+  const used = getReshuffleCount();
+  const remaining = MAX_RESHUFFLES - used;
+
+  if(remaining <= 0){
+    resetBtn.disabled = true;
+    resetBtn.style.display = "none";
+    usedNote.textContent = `引き直しは${MAX_RESHUFFLES}回とも使用済みです`;
+    usedNote.style.display = "block";
+  } else {
+    resetBtn.disabled = false;
+    resetBtn.style.display = "inline-block";
+    if(used > 0){
+      usedNote.textContent = `残り引き直し回数：あと${remaining}回`;
+      usedNote.style.display = "block";
+    } else {
+      usedNote.style.display = "none";
+    }
+  }
+}
+updateReshuffleUI();
 
 function askReshuffle(){
   overlay.classList.add("show");
@@ -621,7 +644,10 @@ function confirmReshuffle(){
 
   document.getElementById("bingoBanner").style.display = "none";
   document.getElementById("reachBanner").style.display = "none";
-  localStorage.setItem(RESHUFFLE_KEY, "1");
+
+  const used = getReshuffleCount() + 1;
+  localStorage.setItem(RESHUFFLE_COUNT_KEY, String(used));
+
   location.reload();
 }
 </script>
